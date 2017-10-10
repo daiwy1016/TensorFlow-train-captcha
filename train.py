@@ -202,16 +202,14 @@ def train_crack_captcha_cnn():
     output = crack_captcha_cnn()
     # loss
     #loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(output, Y))
-    # 定义损失函数,依旧使用交叉熵  同时定义优化器  learning rate = 1e-4
-#函数说明：sigmoid损失函数计算
 
+# 定义损失函数,依旧使用交叉熵  同时定义优化器  learning rate = 1e-4
+# 函数说明：sigmoid损失函数计算
 # 参数1：labels
-
 # 类型和logits一致
-
 # 参数2：logits
-
 # 类型 `float32` or `float64`.
+
     loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=output, labels=Y))
     # 最后一层用来分类的softmax和sigmoid有什么不同？
     # optimizer 为了加快训练 learning_rate应该开始大，然后慢慢衰
@@ -227,7 +225,7 @@ def train_crack_captcha_cnn():
 
     #开始训练
     isTrain = True #来区分训练阶段和测试阶段，True 表示训练，False表示测试
-    train_steps = 50 #表示训练的次数，例子中使用100
+    train_steps = 20 #表示训练的次数，例子中使用100
     checkpoint_steps = 5 #表示训练多少次保存一下checkpoints，例子中使用50
     checkpoint_dir = '.\\' #表示checkpoints文件的保存路径，例子中使用当前路径F:\\py3workspace\\train_captcha\\
     isAgainTrain=False #表示是否恢复保存的模型继续训练
@@ -259,6 +257,8 @@ def train_crack_captcha_cnn():
                         saver.save(sess, checkpoint_dir +"crack_capcha.model", global_step=step+1)
                         print (time.time()-start_time)
                         break
+                summary_writer = tf.summary.FileWriter("F://py3workspace//train_captcha//log", sess.graph)
+                summary_writer.close()
     else:
         #output = crack_captcha_cnn()
         saver = tf.train.Saver(max_to_keep=1)
