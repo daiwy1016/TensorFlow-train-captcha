@@ -226,22 +226,23 @@ def train_crack_captcha_cnn():
 
 
     #开始训练
-    isTrain = False #来区分训练阶段和测试阶段，True 表示训练，False表示测试
+    isTrain = True #来区分训练阶段和测试阶段，True 表示训练，False表示测试
     train_steps = 50 #表示训练的次数，例子中使用100
     checkpoint_steps = 5 #表示训练多少次保存一下checkpoints，例子中使用50
-    checkpoint_dir = 'F:\\py3workspace\\train_captcha\\' #表示checkpoints文件的保存路径，例子中使用当前路径
-    isAgainTrain=True #表示是否恢复保存的模型继续训练
+    checkpoint_dir = '.\\' #表示checkpoints文件的保存路径，例子中使用当前路径F:\\py3workspace\\train_captcha\\
+    isAgainTrain=False #表示是否恢复保存的模型继续训练
 
     if isTrain:
         saver = tf.train.Saver(max_to_keep=1)
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer()) #初始化所有变量
             step = 0
-            f=open('acc.txt','w')
+            f=open(checkpoint_dir+'acc.txt','w+')
             for step in range(train_steps):
+                #step += 50
                 batch_x, batch_y = get_next_batch(64)
                 if isAgainTrain:
-                     saver.restore(sess, tf.train.latest_checkpoint(checkpoint_dir))
+                    saver.restore(sess, tf.train.latest_checkpoint(checkpoint_dir))
                 _, loss_ = sess.run([optimizer, loss], feed_dict={X: batch_x, Y: batch_y, keep_prob: 0.75})
                 print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())),step, loss_)
                 f.write(str(step+1)+', val_acc: '+str(loss_)+'\n')
@@ -250,7 +251,7 @@ def train_crack_captcha_cnn():
                 if (step+1) % checkpoint_steps == 0 and step > 0:
                     batch_x_test, batch_y_test = get_next_batch(100)
                     acc = sess.run(accuracy, feed_dict={X: batch_x_test, Y: batch_y_test, keep_prob: 1.})
-                    print (u'***************************************************************第%s次的准确率为%s'%(step+1, acc))
+                    print (u'***************************************************************第%s次的准确率为%s'%((step+1), acc))
                     #saver.save(sess, checkpoint_dir + 'model.ckpt', global_step=step)
                     saver.save(sess, checkpoint_dir +"crack_capcha.model", global_step=step+1)
                     # 如果准确率大于50%,保存模型,完成训练
@@ -260,7 +261,7 @@ def train_crack_captcha_cnn():
                         break
     else:
         #output = crack_captcha_cnn()
-        saver = tf.train.Saver()
+        saver = tf.train.Saver(max_to_keep=1)
         sess = tf.Session()
         #latest_checkpoint自动获取最后一次保存的模型
         saver.restore(sess, tf.train.latest_checkpoint(checkpoint_dir))
