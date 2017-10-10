@@ -129,8 +129,8 @@ keep_prob = tf.placeholder(tf.float32)  # dropout
 
 # 定义CNN
 def crack_captcha_cnn(w_alpha=0.01, b_alpha=0.1):
-    # 卷积中将1x784转换为28x28x1  [-1,,,]代表样本数量不变 [,,,1]代表通道数
-    #reshape函数的作用是将tensor变换为参数shape的形式。
+	# 卷积中将1x784转换为28x28x1  [-1,,,]代表样本数量不变 [,,,1]代表通道数
+	#reshape函数的作用是将tensor变换为参数shape的形式。
     x = tf.reshape(X, shape=[-1, IMAGE_HEIGHT, IMAGE_WIDTH, 1])
 
     # w_c1_alpha = np.sqrt(2.0/(IMAGE_HEIGHT*IMAGE_WIDTH)) #
@@ -224,94 +224,52 @@ def train_crack_captcha_cnn():
     correct_pred = tf.equal(max_idx_p, max_idx_l)
     accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
+    saver = tf.train.Saver()
+     #开始训练
 
-    #开始训练
-    isTrain = False #来区分训练阶段和测试阶段，True 表示训练，False表示测试
-    train_steps = 50 #表示训练的次数，例子中使用100
-    checkpoint_steps = 5 #表示训练多少次保存一下checkpoints，例子中使用50
-    checkpoint_dir = 'F:\\py3workspace\\train_captcha\\' #表示checkpoints文件的保存路径，例子中使用当前路径
-    isAgainTrain=True #表示是否恢复保存的模型继续训练
+    with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())#初始化所有变量
+        step = 0
+        while True:
+            batch_x, batch_y = get_next_batch(64)
+            _, loss_ = sess.run([optimizer, loss], feed_dict={X: batch_x, Y: batch_y, keep_prob: 0.75})
+            print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())),step, loss_)
 
-    if isTrain:
-        saver = tf.train.Saver(max_to_keep=1)
-        with tf.Session() as sess:
-            sess.run(tf.global_variables_initializer()) #初始化所有变量
-            step = 0
-            f=open('acc.txt','w')
-            for step in range(train_steps):
-                batch_x, batch_y = get_next_batch(64)
-                if isAgainTrain:
-                     saver.restore(sess, tf.train.latest_checkpoint(checkpoint_dir))
-                _, loss_ = sess.run([optimizer, loss], feed_dict={X: batch_x, Y: batch_y, keep_prob: 0.75})
-                print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())),step, loss_)
-                f.write(str(step+1)+', val_acc: '+str(loss_)+'\n')
+            # 每100 step计算一次准确率
+            if step % 100 == 0:
+                batch_x_test, batch_y_test = get_next_batch(100)
+                acc = sess.run(accuracy, feed_dict={X: batch_x_test, Y: batch_y_test, keep_prob: 1.})
+                print (u'***************************************************************第%s次的准确率为%s'%(step, acc))
+                # 如果准确率大于50%,保存模型,完成训练
+                if acc > 0.5:                  ##我这里设了0.9，设得越大训练要花的时间越长，如果设得过于接近1，很难达到。如果使用cpu，花的时间很长，cpu占用很高电脑发烫。
+                    saver.save(sess, "crack_capcha.model", global_step=step)
+                    print (time.time()-start_time)
+                    break
 
-                # 每100 step计算一次准确率
-                if (step+1) % checkpoint_steps == 0 and step > 0:
-                    batch_x_test, batch_y_test = get_next_batch(100)
-                    acc = sess.run(accuracy, feed_dict={X: batch_x_test, Y: batch_y_test, keep_prob: 1.})
-                    print (u'***************************************************************第%s次的准确率为%s'%(step+1, acc))
-                    #saver.save(sess, checkpoint_dir + 'model.ckpt', global_step=step)
-                    saver.save(sess, checkpoint_dir +"crack_capcha.model", global_step=step+1)
-                    # 如果准确率大于50%,保存模型,完成训练
-                    if acc > 0.5:                  ##我这里设了0.9，设得越大训练要花的时间越长，如果设得过于接近1，很难达到。如果使用cpu，花的时间很长，cpu占用很高电脑发烫。
-                        saver.save(sess, checkpoint_dir +"crack_capcha.model", global_step=step+1)
-                        print (time.time()-start_time)
-                        break
-    else:
-        #output = crack_captcha_cnn()
-        saver = tf.train.Saver()
-        sess = tf.Session()
-        #latest_checkpoint自动获取最后一次保存的模型
-        saver.restore(sess, tf.train.latest_checkpoint(checkpoint_dir))
-        #batch_x_test, batch_y_test = get_next_batch(100)
-        #_, loss_ = sess.run([optimizer, loss], feed_dict={X: batch_x_test, Y: batch_y_test, keep_prob: 1.})
-        #print(loss_)
-        #quit()
-        while(1):
-            text, image = gen_captcha_text_and_image()
-            image = convert2gray(image)
-            image = image.flatten() / 255
-            predict = tf.argmax(tf.reshape(output, [-1, MAX_CAPTCHA, CHAR_SET_LEN]), 2)
-            text_list = sess.run(predict, feed_dict={X: [image], keep_prob: 1})
-            print(text_list)
-            predict_text = text_list[0].tolist()
-            print(predict_text)
-            vector = np.zeros(MAX_CAPTCHA * CHAR_SET_LEN)
-            #print(vector)
-            i = 0
-            for t in predict_text:
-                vector[i * 63 + t] = 1
-                i += 1
-                # break
-            print(vector)
-            print("正确: {}  预测: {}".format(text, vec2text(vector)))
-            break
-        sess.close()
+            step += 1
 
+#这是训练代码函数，不训练就去掉
+#train_crack_captcha_cnn()
 
+#开始测试
+#第一的cnn
+output = crack_captcha_cnn()
+saver = tf.train.Saver()
+sess = tf.Session()
+saver.restore(sess, tf.train.latest_checkpoint('.'))
 
+while(1):
+    text, image = gen_captcha_text_and_image()
+    image = convert2gray(image)
+    image = image.flatten() / 255
+    predict = tf.argmax(tf.reshape(output, [-1, MAX_CAPTCHA, CHAR_SET_LEN]), 2)
+    text_list = sess.run(predict, feed_dict={X: [image], keep_prob: 1})
+    predict_text = text_list[0].tolist()
 
-
-
-
-            #output = crack_captcha_cnn()
-            #saver = tf.train.Saver()
-            #sess = tf.Session()
-            #saver.restore(sess, tf.train.latest_checkpoint('F:\\py3workspace\\train_captcha\\'))
-
-            # ckpt = tf.train.get_checkpoint_state(checkpoint_dir)
-            #tf.train.get_checkpoint_state可以用来检查是否有保存的checkpoint
-            # if ckpt and ckpt.model_checkpoint_path:
-            #     saver.restore(sess, ckpt.model_checkpoint_path)
-            # else:
-            #     pass
-            #print (u'***************************************************************第1次的准确率为%s'%(acc))
-
-            #print(sess.run(w_out))
-            #print(sess.run(b_out))
-            #print(sess.run(loss_))
-            #print(sess.run(acc))
-            #saver.restore(sess, tf.train.latest_checkpoint('.'))
-
-train_crack_captcha_cnn()
+    vector = np.zeros(MAX_CAPTCHA * CHAR_SET_LEN)
+    i = 0
+    for t in predict_text:
+        vector[i * 63 + t] = 1
+        i += 1
+        # break
+    print("正确: {}  预测: {}".format(text, vec2text(vector)))
