@@ -224,7 +224,7 @@ def train_crack_captcha_cnn():
     correct_pred = tf.equal(max_idx_p, max_idx_l)
     accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
-    saver = tf.train.Saver()
+    saver = tf.train.Saver(max_to_keep=1)
      #开始训练
 
     with tf.Session() as sess:
@@ -236,21 +236,37 @@ def train_crack_captcha_cnn():
             print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())),step, loss_)
 
             # 每100 step计算一次准确率
-            if step % 100 == 0:
+            if step % 10 == 0 and step >0:
                 batch_x_test, batch_y_test = get_next_batch(100)
                 acc = sess.run(accuracy, feed_dict={X: batch_x_test, Y: batch_y_test, keep_prob: 1.})
                 print (u'***************************************************************第%s次的准确率为%s'%(step, acc))
+                saver.save(sess, ".\\crack_capcha.model", global_step=step)
                 # 如果准确率大于50%,保存模型,完成训练
                 if acc > 0.5:                  ##我这里设了0.9，设得越大训练要花的时间越长，如果设得过于接近1，很难达到。如果使用cpu，花的时间很长，cpu占用很高电脑发烫。
-                    saver.save(sess, "crack_capcha.model", global_step=step)
+                    saver.save(sess, ".\\crack_capcha.model", global_step=step)
                     print (time.time()-start_time)
                     break
 
             step += 1
 
 #这是训练代码函数，不训练就去掉
-#train_crack_captcha_cnn()
+train_crack_captcha_cnn()
+quit()
+# def a():
+#     a=1
+#     b=2
+#     return a,b
+# a,b=a()
+# print(a)
+# print(b)
+# quit()
 
+# start_step = 5
+# for start_step in range(start_step,10):
+#     start_step =start_step+5
+#     print(start_step)
+
+# quit()
 #开始测试
 #第一的cnn
 output = crack_captcha_cnn()
